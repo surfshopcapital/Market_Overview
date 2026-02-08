@@ -10,7 +10,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 from config import SessionLocal
 from db.models import EmailSettings
-from workers.emailer import EmailDigester
+
+# Lazy import - emailer needs resend which may not be installed
+_emailer_available = False
+try:
+    from workers.emailer import EmailDigester
+    _emailer_available = True
+except ImportError:
+    pass
 
 st.title("⚙️ Email Settings")
 st.markdown("Configure your market digest email preferences")
@@ -171,15 +178,26 @@ st.markdown("---")
 st.markdown("### Test Email")
 st.markdown("Send a test digest email with current settings")
 
-if st.button("📧 Send Test Email Now", type="secondary"):
-    try:
-        with st.spinner("Generating and sending test email..."):
-            digester = EmailDigester()
-            digester.run(force=True)
-        st.success("✅ Test email sent successfully!")
-    except Exception as e:
-        st.error(f"Error sending test email: {e}")
-        st.exception(e)
+if not _emailer_available:
+    st.warning("""
+    **Resend is not installed.** To enable email digests:
+    
+    1. Install resend: `pip install resend`
+    2. Get a free API key at [resend.com](https://resend.com) (3,000 emails/month free)
+    3. Add to `.env`: `RESEND_API_KEY=re_your_key` and `EMAIL_FROM=onboarding@resend.dev` (or your verified domain)
+    
+    See the **Email Setup Guide** below for details.
+    """)
+else:
+    if st.button("📧 Send Test Email Now", type="secondary"):
+        try:
+            with st.spinner("Generating and sending test email..."):
+                digester = EmailDigester()
+                digester.run(force=True)
+            st.success("✅ Test email sent successfully!")
+        except Exception as e:
+            st.error(f"Error sending test email: {e}")
+            st.exception(e)
 
 # Display current schedule
 st.markdown("---")

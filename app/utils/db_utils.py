@@ -12,9 +12,10 @@ def get_new_events(
     db: Session, 
     window_hours: int = 24,
     search_term: Optional[str] = None,
-    category_filter: Optional[str] = None
+    category_filter: Optional[str] = None,
+    exclude_categories: Optional[List[str]] = None
 ) -> pd.DataFrame:
-    """Get new events within time window (excluding sports)."""
+    """Get new events within time window (excluding sports + optional categories)."""
     cutoff = datetime.now(timezone.utc) - timedelta(hours=window_hours)
     
     # Get sports categories to exclude
@@ -29,7 +30,9 @@ def get_new_events(
         Event.category,
         Event.first_seen_at,
         func.sum(Market.volume).label("total_volume"),
-        func.count(Market.ticker).label("market_count")
+        func.sum(Market.volume_24h).label("volume_24h"),
+        func.count(Market.ticker).label("market_count"),
+        func.max(Market.open_time).label("most_recent_market_opened")
     ).join(
         Market, Market.event_ticker == Event.event_ticker
     ).filter(
@@ -40,10 +43,13 @@ def get_new_events(
     if sports_categories:
         query = query.filter(~Event.category.in_(sports_categories))
     
+    # Exclude additional categories (crypto, climate, etc.)
+    if exclude_categories:
+        for cat in exclude_categories:
+            query = query.filter(func.lower(Event.category) != cat.lower())
+    
     if search_term:
-        query = query.filter(
-            Event.title.ilike(f"%{search_term}%")
-        )
+        query = query.filter(Event.title.ilike(f"%{search_term}%"))
     
     if category_filter and category_filter != "All":
         query = query.filter(Event.category == category_filter)
@@ -51,7 +57,7 @@ def get_new_events(
     query = query.group_by(
         Event.event_ticker, Event.title, Event.category, Event.first_seen_at
     ).order_by(
-        desc(Event.first_seen_at)  # Most recent first
+        desc(func.max(Market.open_time))  # Most recent market opened first
     )
     
     results = query.all()
@@ -61,15 +67,17 @@ def get_new_events(
             "Event Ticker": r.event_ticker,
             "Title": r.title,
             "Category": r.category or "N/A",
-            "Opened": r.first_seen_at.strftime("%Y-%m-%d %H:%M UTC"),
+            "Event Opened": r.first_seen_at.strftime("%Y-%m-%d %H:%M UTC") if r.first_seen_at else "N/A",
+            "Most Recent Market Opened": r.most_recent_market_opened.strftime("%Y-%m-%d %H:%M UTC") if r.most_recent_market_opened else "N/A",
             "Total Volume": int(r.total_volume or 0),
+            "24h Volume": int(r.volume_24h or 0),
             "Markets": int(r.market_count)
         }
         for r in results
     ])
 
 
-def get_markets_for_event(db: Session, event_ticker: str) -> pd.DataFrame:
+def get_markets_for_event(db: Session, event_ticker: str, include_trends: bool = True) -> pd.DataFrame:
     """Get all markets for an event."""
     markets = db.query(Market).filter(
         Market.event_ticker == event_ticker
@@ -77,11 +85,10 @@ def get_markets_for_event(db: Session, event_ticker: str) -> pd.DataFrame:
         desc(Market.volume)
     ).all()
     
-    from app.utils import derive_no_bid_ask
-    
-    return pd.DataFrame([
-        {
-            "Ticker": m.ticker,
+    data = []
+    for m in markets:
+        row = {
+            "Yes Subtitle": m.yes_sub_title or "—",
             "Title": m.title,
             "Opened": m.open_time.strftime("%Y-%m-%d %H:%M UTC") if m.open_time else "N/A",
             "Closes": m.close_time.strftime("%Y-%m-%d %H:%M UTC") if m.close_time else "N/A",
@@ -92,8 +99,17 @@ def get_markets_for_event(db: Session, event_ticker: str) -> pd.DataFrame:
             "Yes Ask": f"{m.yes_ask}¢" if m.yes_ask else "—",
             "Last Price": f"{m.last_price}¢" if m.last_price else "—"
         }
-        for m in markets
-    ])
+        if include_trends:
+            row["30m Trend"] = get_price_trend(db, m.ticker, hours_ago=0.5) or "—"
+            row["24h Trend"] = get_price_trend(db, m.ticker, hours_ago=24) or "—"
+        row["Ticker"] = m.ticker  # Keep for Kalshi links
+        data.append(row)
+    
+    df = pd.DataFrame(data)
+    if include_trends and not df.empty:
+        cols = ["Yes Subtitle", "Title", "Opened", "Closes", "Volume", "24h Volume", "Open Interest", "30m Trend", "24h Trend", "Yes Bid", "Yes Ask", "Last Price", "Ticker"]
+        df = df[[c for c in cols if c in df.columns]]
+    return df
 
 
 def get_trending_markets(
@@ -138,7 +154,7 @@ def get_trending_markets(
         trend_24h = get_price_trend(db, m.ticker, hours_ago=24)   # 24 hours
         
         data.append({
-            "Ticker": m.ticker,
+            "Yes Subtitle": m.yes_sub_title or "—",
             "Market Title": m.title,
             "Event": e.title,
             "Category": e.category or "N/A",
@@ -150,23 +166,33 @@ def get_trending_markets(
             "Last Price": f"{m.last_price}¢" if m.last_price else "—",
             "30m Trend": trend_30m or "—",
             "24h Trend": trend_24h or "—",
-            "Event Ticker": e.event_ticker
+            "Event Ticker": e.event_ticker,
+            "Ticker": m.ticker
         })
     
     return pd.DataFrame(data)
 
 
-def get_mention_markets(
+def get_mention_events(
     db: Session,
     new_window_hours: int = 24,
     search_term: Optional[str] = None
 ) -> pd.DataFrame:
-    """Get mention markets sorted by expiration."""
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=new_window_hours)
+    """Get mention events (events with at least one mention market), sorted by soonest expiration."""
     now_utc = datetime.now(timezone.utc)
     
-    query = db.query(Market, Event).join(
-        Event, Market.event_ticker == Event.event_ticker
+    # Get events that have mention markets
+    subq = db.query(
+        Event.event_ticker,
+        Event.title,
+        Event.category,
+        Event.first_seen_at,
+        func.count(Market.ticker).label("mention_count"),
+        func.sum(Market.volume).label("total_volume"),
+        func.sum(Market.volume_24h).label("volume_24h"),
+        func.min(Market.expiration_time).label("soonest_expiration")
+    ).join(
+        Market, Market.event_ticker == Event.event_ticker
     ).filter(
         Market.is_mention == True,
         Market.status.in_(['active', 'open']),
@@ -174,28 +200,17 @@ def get_mention_markets(
     )
     
     if search_term:
-        query = query.filter(
-            Market.title.ilike(f"%{search_term}%")
-        )
+        subq = subq.filter(Event.title.ilike(f"%{search_term}%"))
     
-    query = query.order_by(Market.expiration_time.asc())
+    subq = subq.group_by(Event.event_ticker, Event.title, Event.category, Event.first_seen_at).subquery()
     
-    results = query.all()
+    results = db.query(subq).order_by(subq.c.soonest_expiration.asc()).all()
     
     data = []
-    for m, e in results:
-        # Ensure first_seen_at is timezone-aware for comparison
-        first_seen = m.first_seen_at
-        if first_seen:
-            first_seen_utc = first_seen if first_seen.tzinfo else first_seen.replace(tzinfo=timezone.utc)
-            is_new = first_seen_utc >= cutoff
-        else:
-            is_new = False
-        
-        # Calculate time remaining
+    for r in results:
         time_remaining = "N/A"
-        if m.expiration_time:
-            exp_time = m.expiration_time if m.expiration_time.tzinfo else m.expiration_time.replace(tzinfo=timezone.utc)
+        if r.soonest_expiration:
+            exp_time = r.soonest_expiration if r.soonest_expiration.tzinfo else r.soonest_expiration.replace(tzinfo=timezone.utc)
             delta = exp_time - now_utc
             if delta.total_seconds() > 0:
                 days = delta.days
@@ -211,16 +226,47 @@ def get_mention_markets(
                 time_remaining = "Expired"
         
         data.append({
-            "New": "🆕" if is_new else "",
-            "Ticker": m.ticker,
-            "Market Title": m.title,
-            "Event": e.title,
-            "Category": e.category or "N/A",
-            "Expires": m.expiration_time.strftime("%Y-%m-%d %H:%M UTC") if m.expiration_time else "N/A",
-            "Time Remaining": time_remaining,
+            "Event Ticker": r.event_ticker,
+            "Title": r.title,
+            "Category": r.category or "N/A",
+            "Event Opened": r.first_seen_at.strftime("%Y-%m-%d %H:%M UTC") if r.first_seen_at else "N/A",
+            "Mention Markets": int(r.mention_count),
+            "Volume": int(r.total_volume or 0),
+            "24h Volume": int(r.volume_24h or 0),
+            "Soonest Expires": r.soonest_expiration.strftime("%Y-%m-%d %H:%M UTC") if r.soonest_expiration else "N/A",
+            "Time Remaining": time_remaining
+        })
+    
+    return pd.DataFrame(data)
+
+
+def get_mention_markets_for_event(
+    db: Session,
+    event_ticker: str
+) -> pd.DataFrame:
+    """Get mention markets for an event (for drill-down)."""
+    markets = db.query(Market).filter(
+        Market.event_ticker == event_ticker,
+        Market.is_mention == True,
+        Market.status.in_(['active', 'open'])
+    ).order_by(Market.expiration_time.asc()).all()
+    
+    data = []
+    for m in markets:
+        trend_30m = get_price_trend(db, m.ticker, hours_ago=0.5)
+        trend_24h = get_price_trend(db, m.ticker, hours_ago=24)
+        
+        data.append({
+            "Yes Subtitle": m.yes_sub_title or "—",
+            "Volume": int(m.volume or 0),
+            "24h Volume": int(m.volume_24h or 0),
+            "Open Interest": int(m.open_interest or 0),
             "Yes Bid": f"{m.yes_bid}¢" if m.yes_bid else "—",
             "Yes Ask": f"{m.yes_ask}¢" if m.yes_ask else "—",
-            "Event Ticker": e.event_ticker
+            "Last Price": f"{m.last_price}¢" if m.last_price else "—",
+            "30m Trend": trend_30m or "—",
+            "24h Trend": trend_24h or "—",
+            "Ticker": m.ticker
         })
     
     return pd.DataFrame(data)

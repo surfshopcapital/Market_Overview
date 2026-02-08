@@ -15,8 +15,8 @@ class Settings(BaseSettings):
         description="Kalshi API base URL"
     )
     
-    # Email (SendGrid)
-    SENDGRID_API_KEY: str = Field(..., description="SendGrid API key")
+    # Email (Resend - 3,000 emails/month free forever)
+    RESEND_API_KEY: str = Field(..., description="Resend API key")
     EMAIL_FROM: str = Field(..., description="From email address")
     EMAIL_FROM_NAME: str = Field(
         default="Kalshi Markets Digest",

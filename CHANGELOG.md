@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Streamlit for frontend
 - PostgreSQL 15+ for data storage
 - SQLAlchemy for ORM
-- SendGrid for email delivery
+- Resend for email delivery (3,000 emails/month free)
 - Railway for deployment and cron scheduling
 - Pydantic for data validation
 - Structured logging

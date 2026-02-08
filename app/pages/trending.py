@@ -31,12 +31,40 @@ with st.sidebar:
     
     search_term = st.text_input("Search", placeholder="Search markets...")
 
+# Cached trending fetch
+@st.cache_data(ttl=1800)  # Cache for 30 minutes
+def get_cached_trending(search_term_val, category_val):
+    _db = SessionLocal()
+    try:
+        return get_trending_markets(
+            _db,
+            search_term=search_term_val,
+            category_filter=category_val
+        )
+    finally:
+        _db.close()
+
+def style_trends(df):
+    """Apply green/red coloring to trend columns."""
+    def color_trend(val):
+        if isinstance(val, str):
+            if val.startswith("↗"):
+                return "color: #2ecc71; font-weight: bold"
+            elif val.startswith("↘"):
+                return "color: #e74c3c; font-weight: bold"
+        return ""
+    
+    styled = df.style
+    for col in ["30m Trend", "24h Trend"]:
+        if col in df.columns:
+            styled = styled.map(color_trend, subset=[col])
+    return styled
+
 # Get trending markets
 try:
-    df = get_trending_markets(
-        db,
-        search_term=search_term if search_term else None,
-        category_filter=category_filter if category_filter != "All" else None
+    df = get_cached_trending(
+        search_term if search_term else None,
+        category_filter if category_filter != "All" else None
     )
     
     if df.empty:
@@ -44,9 +72,10 @@ try:
     else:
         st.metric("Trending Markets", len(df))
         
-        # Display markets with selection - FIX: only one dataframe
+        # Display markets with selection (hide Event Ticker and Ticker)
+        display_cols = [c for c in df.columns if c not in ("Event Ticker", "Ticker")]
         event_selection = st.dataframe(
-            df[[col for col in df.columns if col != "Event Ticker"]],  # Hide Event Ticker column
+            df[display_cols],
             use_container_width=True,
             hide_index=True,
             on_select="rerun",
@@ -66,8 +95,10 @@ try:
             markets_df = get_markets_for_event(db, event_ticker)
             
             if not markets_df.empty:
+                # Hide Ticker column for display
+                display_markets = markets_df[[c for c in markets_df.columns if c != "Ticker"]]
                 st.dataframe(
-                    markets_df,
+                    display_markets,
                     use_container_width=True,
                     hide_index=True,
                     key="trending_markets_detail"

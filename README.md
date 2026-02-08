@@ -88,7 +88,7 @@ Production-ready Streamlit dashboard for Kalshi prediction markets with PostgreS
 - Python 3.11+
 - PostgreSQL 15+
 - Kalshi API credentials
-- SendGrid API key (for emails)
+- Resend API key (for emails - 3,000/month free at resend.com)
 - Railway account (for deployment)
 - Streamlit Cloud account (optional, for frontend)
 
@@ -103,9 +103,9 @@ DATABASE_URL=postgresql://user:password@host:5432/kalshi_markets
 # Kalshi API (public endpoints - no auth required)
 KALSHI_API_BASE_URL=https://api.elections.kalshi.com/trade-api/v2
 
-# Email (SendGrid)
-SENDGRID_API_KEY=your_sendgrid_api_key
-EMAIL_FROM=noreply@yourdomain.com
+# Email (Resend - free: 3,000 emails/month)
+RESEND_API_KEY=re_your_resend_api_key
+EMAIL_FROM=onboarding@resend.dev
 EMAIL_FROM_NAME=Kalshi Markets Digest
 
 # Application
@@ -326,7 +326,7 @@ FROM events;
 - Run manual ingestion: `python workers/ingest.py`
 
 ### Emails not sending
-- Verify SendGrid API key
+- Verify Resend API key and domain (use onboarding@resend.dev for testing)
 - Check email worker logs
 - Test manually: `python workers/emailer.py --force`
 - Check `email_digest_logs` for errors
@@ -374,8 +374,8 @@ WHERE id = 1;
 - Cron workers: Free tier (5 services)
 - Total: ~$5-20/month
 
-### SendGrid
-- Free tier: 100 emails/day
+### Resend
+- Free tier: 3,000 emails/month (100/day), no trial - permanent free
 - 4 emails/day = well within limit
 
 ### Streamlit Cloud
@@ -432,4 +432,4 @@ For issues or questions:
 
 ---
 
-**Built with:** Python, Streamlit, PostgreSQL, SQLAlchemy, SendGrid, Railway
+**Built with:** Python, Streamlit, PostgreSQL, SQLAlchemy, Resend, Railway

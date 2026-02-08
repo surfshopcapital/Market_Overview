@@ -1,4 +1,4 @@
-"""Mentions Markets page."""
+"""Mentions page - shows events with mention markets, drill-down to markets."""
 import streamlit as st
 import sys
 import os
@@ -7,11 +7,11 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from config import SessionLocal
-from app.utils.db_utils import get_mention_markets, get_markets_for_event
+from app.utils.db_utils import get_mention_events, get_mention_markets_for_event
 from app.utils.refresh import show_refresh_controls
 
 st.title("💬 Mention Markets")
-st.markdown("Markets about mentions, sorted by expiration time")
+st.markdown("Events with mention markets, sorted by soonest expiration")
 
 # Show refresh controls
 show_refresh_controls()
@@ -33,73 +33,54 @@ with st.sidebar:
         index=2  # Default to 24h
     )
     
-    search_term = st.text_input("Search", placeholder="Search markets...")
+    search_term = st.text_input("Search", placeholder="Search events...")
 
-# Get mention markets
 try:
-    df = get_mention_markets(
+    df = get_mention_events(
         db,
         new_window_hours=new_window,
         search_term=search_term if search_term else None
     )
     
     if df.empty:
-        st.info("No mention markets found")
+        st.info("No mention events found")
     else:
-        st.metric("Mention Markets", len(df))
-        new_count = (df["New"] == "🆕").sum()
-        if new_count > 0:
-            st.metric(f"New (within {new_window}h)", new_count)
+        st.metric("Mention Events", len(df))
         
-        # Display markets with color coding
-        st.markdown("### Markets (🆕 = new)")
+        st.markdown("### Events (click row to see mention markets)")
         
-        # Use conditional formatting for new markets
-        styled_df = df.style.apply(
-            lambda row: ['background-color: #fff3cd' if row['New'] == '🆕' else '' for _ in row],
-            axis=1
-        )
-        
-        st.dataframe(
-            df[[col for col in df.columns if col != "Event Ticker"]],
-            use_container_width=True,
-            hide_index=True,
-            on_select="rerun",
-            selection_mode="single-row"
-        )
-        
-        # Show event details for selected market
         event_selection = st.dataframe(
-            df[[col for col in df.columns if col != "Event Ticker"]],
+            df,
             use_container_width=True,
             hide_index=True,
             on_select="rerun",
-            selection_mode="single-row"
+            selection_mode="single-row",
+            key="mentions_events_table"
         )
         
+        # Show markets drill-down for selected event
         if event_selection and event_selection.selection.rows:
             selected_idx = event_selection.selection.rows[0]
-            selected_market = df.iloc[selected_idx]
-            event_ticker = selected_market["Event Ticker"]
-            ticker = selected_market["Ticker"]
+            selected_event = df.iloc[selected_idx]
+            event_ticker = selected_event["Event Ticker"]
             
-            st.markdown(f"### Related Markets in Event: {selected_market['Event']}")
+            st.markdown(f"### Mention Markets in: {selected_event['Title']}")
             
-            markets_df = get_markets_for_event(db, event_ticker)
+            markets_df = get_mention_markets_for_event(db, event_ticker)
             
             if not markets_df.empty:
+                # Hide Ticker for display
+                display_cols = [c for c in markets_df.columns if c != "Ticker"]
                 st.dataframe(
-                    markets_df,
+                    markets_df[display_cols],
                     use_container_width=True,
-                    hide_index=True
+                    hide_index=True,
+                    key="mentions_markets_detail"
                 )
                 
-                # Add links
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown(f"[View Market on Kalshi →](https://kalshi.com/markets/{ticker})")
-                with col2:
-                    st.markdown(f"[View Event on Kalshi →](https://kalshi.com/events/{event_ticker})")
+                st.markdown(f"[View Event on Kalshi →](https://kalshi.com/events/{event_ticker})")
+            else:
+                st.info("No mention markets found for this event")
 
 except Exception as e:
     st.error(f"Error loading data: {e}")

@@ -97,8 +97,8 @@ WHERE id = 1;
 ```bash
 DATABASE_URL=postgresql://user:pass@host:5432/kalshi_markets
 KALSHI_API_BASE_URL=https://api.elections.kalshi.com/trade-api/v2
-SENDGRID_API_KEY=your_sendgrid_key
-EMAIL_FROM=noreply@yourdomain.com
+RESEND_API_KEY=re_your_resend_key
+EMAIL_FROM=onboarding@resend.dev
 ```
 
 ### Optional
@@ -239,8 +239,8 @@ railway logs --service email-worker-6am
 # Test manually
 railway run python workers/emailer.py --force
 
-# Check SendGrid dashboard
-# https://app.sendgrid.com
+# Check Resend dashboard
+# https://resend.com/emails
 ```
 
 ### Database connection failed
@@ -283,7 +283,7 @@ Monthly:
 ### External Services
 - **Kalshi API**: https://api.elections.kalshi.com/trade-api/v2
 - **Kalshi Docs**: https://docs.kalshi.com
-- **SendGrid**: https://app.sendgrid.com
+- **Resend**: https://resend.com/emails
 - **Railway**: https://railway.app
 
 ## Support

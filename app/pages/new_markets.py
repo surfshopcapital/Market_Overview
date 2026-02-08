@@ -37,6 +37,18 @@ with st.sidebar:
     category_filter = st.selectbox("Category", options=categories)
     
     search_term = st.text_input("Search", placeholder="Search events...")
+    
+    st.markdown("---")
+    st.header("Exclude Categories")
+    exclude_crypto = st.checkbox("Exclude Crypto", value=True)
+    exclude_climate = st.checkbox("Exclude Climate / Weather", value=True)
+
+# Build exclusion list
+exclude_cats = []
+if exclude_crypto:
+    exclude_cats.append("Crypto")
+if exclude_climate:
+    exclude_cats.extend(["Climate", "Weather"])
 
 # Get new events
 try:
@@ -44,7 +56,8 @@ try:
         db, 
         window_hours=time_window,
         search_term=search_term if search_term else None,
-        category_filter=category_filter if category_filter != "All" else None
+        category_filter=category_filter if category_filter != "All" else None,
+        exclude_categories=exclude_cats if exclude_cats else None
     )
     
     # Get 24h counts
@@ -86,8 +99,10 @@ try:
             markets_df = get_markets_for_event(db, event_ticker)
             
             if not markets_df.empty:
+                # Hide Ticker column for display
+                display_markets = markets_df[[c for c in markets_df.columns if c != "Ticker"]]
                 st.dataframe(
-                    markets_df,
+                    display_markets,
                     use_container_width=True,
                     hide_index=True,
                     key="new_markets_detail"

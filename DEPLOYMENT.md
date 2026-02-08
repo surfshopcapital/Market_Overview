@@ -30,7 +30,7 @@ This guide covers deploying the Kalshi Markets Dashboard to production using Rai
 
 3. **API Keys**
    - Kalshi API credentials (from https://kalshi.com)
-   - SendGrid API key (from https://sendgrid.com)
+   - Resend API key (from https://resend.com, 3,000 emails/month free)
 
 4. **Git Repository**
    - Push code to GitHub/GitLab
@@ -68,8 +68,8 @@ Go to Railway dashboard → Your Project → Variables, and add:
 ```
 KALSHI_API_BASE_URL=https://api.elections.kalshi.com/trade-api/v2
 
-SENDGRID_API_KEY=your_sendgrid_key
-EMAIL_FROM=noreply@yourdomain.com
+RESEND_API_KEY=re_your_resend_key
+EMAIL_FROM=onboarding@resend.dev
 EMAIL_FROM_NAME=Kalshi Markets Digest
 
 LOG_LEVEL=INFO
@@ -274,9 +274,9 @@ railway run --service ingestion-worker python workers/ingest.py
 
 ### Emails Not Sending
 
-1. **Check SendGrid API key:**
+1. **Check Resend API key:**
    ```bash
-   railway variables | grep SENDGRID
+   railway variables | grep RESEND
    ```
 
 2. **Check email logs:**
@@ -291,8 +291,8 @@ railway run --service ingestion-worker python workers/ingest.py
    railway run python workers/emailer.py --force
    ```
 
-4. **Verify SendGrid:**
-   - Check SendGrid dashboard for rejected emails
+4. **Verify Resend:**
+   - Check Resend dashboard for rejected emails
    - Verify sender email is authenticated
    - Check spam folders
 
@@ -425,9 +425,9 @@ railway variables > env_backup.txt
 - **Community** (Free): 1 app
 - **Team** ($42/mo): Unlimited apps, custom domains
 
-### SendGrid
-- **Free**: 100 emails/day
-- **Essentials** ($15/mo): 40,000 emails/month
+### Resend
+- **Free**: 3,000 emails/month (100/day), permanent - no trial
+- **Pro** ($20/mo): 50,000 emails/month
 
 **4 emails/day = ~120/month → Free tier sufficient**
 
@@ -448,7 +448,7 @@ railway variables > env_backup.txt
 
 3. **Rotate API keys regularly:**
    - Kalshi API keys
-   - SendGrid API key
+   - Resend API key
    - Database passwords
 
 4. **Enable Railway MFA:**
@@ -462,7 +462,7 @@ railway variables > env_backup.txt
 - **Railway Discord:** https://discord.gg/railway
 - **Streamlit Forum:** https://discuss.streamlit.io
 - **Kalshi API Docs:** https://docs.kalshi.com
-- **SendGrid Support:** https://support.sendgrid.com
+- **Resend Support:** https://resend.com/docs
 
 ---
 

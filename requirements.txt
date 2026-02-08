@@ -17,8 +17,8 @@ streamlit==1.29.0
 pandas==2.1.4
 plotly==5.18.0
 
-# Email
-sendgrid==6.11.0
+# Email (Resend - free tier: 3,000/month, 100/day)
+resend>=2.4.0
 
 # Utilities
 pytz==2023.3

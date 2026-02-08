@@ -23,7 +23,7 @@ A production-ready Streamlit dashboard for monitoring Kalshi prediction markets 
 - **Frontend**: Streamlit 1.29+
 - **Database**: PostgreSQL 15+
 - **API Client**: Custom Kalshi client with auth, pagination, rate limiting
-- **Email**: SendGrid for HTML digests
+- **Email**: Resend for HTML digests (3,000/month free)
 - **Deployment**: Railway (database + workers) + Streamlit Cloud (optional)
 - **Language**: Python 3.11+
 
@@ -122,7 +122,7 @@ A production-ready Streamlit dashboard for monitoring Kalshi prediction markets 
      - Mentions: All mentions, sorted by expiration
      - Relative Volume: Top N events (configurable)
    - Generates HTML email
-   - Sends via SendGrid
+   - Sends via Resend
    - Logs delivery status
 
 3. **Streamlit Dashboard**
@@ -151,7 +151,7 @@ A production-ready Streamlit dashboard for monitoring Kalshi prediction markets 
 ```bash
 DATABASE_URL                 # PostgreSQL connection
 KALSHI_API_BASE_URL         # Optional - Kalshi public API (no auth)
-SENDGRID_API_KEY            # Email delivery
+RESEND_API_KEY              # Email delivery
 EMAIL_FROM
 LOG_LEVEL                   # INFO/DEBUG
 TIMEZONE                    # America/New_York
@@ -270,7 +270,7 @@ Built for Surf Shop Capital by a senior full-stack + data engineer using:
 - PostgreSQL for reliable data storage
 - Railway for seamless deployment
 - Kalshi API for market data
-- SendGrid for email delivery
+- Resend for email delivery
 
 ---
 

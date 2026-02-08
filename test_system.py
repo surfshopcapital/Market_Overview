@@ -29,7 +29,7 @@ def test_config():
         
         required_vars = [
             "DATABASE_URL",
-            "SENDGRID_API_KEY"
+            "RESEND_API_KEY"
         ]
         
         missing = []
@@ -123,8 +123,8 @@ def test_email_config():
     try:
         from config import settings
         
-        if not settings.SENDGRID_API_KEY:
-            print("⚠️  SendGrid API key not configured")
+        if not settings.RESEND_API_KEY:
+            print("⚠️  Resend API key not configured")
             return False
         
         if not settings.EMAIL_FROM:

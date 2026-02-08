@@ -4,8 +4,7 @@ import sys
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 import pytz
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email, To, Content
+import resend
 
 from config import settings, SessionLocal
 from db.models import (
@@ -31,7 +30,7 @@ class EmailDigester:
     
     def __init__(self):
         self.db = SessionLocal()
-        self.sg_client = SendGridAPIClient(settings.SENDGRID_API_KEY)
+        resend.api_key = settings.RESEND_API_KEY
         self.tz = pytz.timezone(settings.TIMEZONE)
     
     def __del__(self):
@@ -461,18 +460,19 @@ class EmailDigester:
         html_content: str,
         digest_data: Dict[str, Any]
     ):
-        """Send email via SendGrid."""
+        """Send email via Resend."""
         try:
-            message = Mail(
-                from_email=Email(settings.EMAIL_FROM, settings.EMAIL_FROM_NAME),
-                to_emails=[To(email) for email in recipients],
-                subject=subject,
-                html_content=Content("text/html", html_content)
-            )
+            from_email = f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM}>"
+            response = resend.Emails.send({
+                "from": from_email,
+                "to": recipients,
+                "subject": subject,
+                "html": html_content,
+            })
             
-            response = self.sg_client.send(message)
-            
-            if response.status_code in [200, 201, 202]:
+            # Resend returns dict with "id" on success
+            email_id = response.get("id") if isinstance(response, dict) else getattr(response, "id", None)
+            if response and email_id:
                 logger.info(f"Email sent successfully to {', '.join(recipients)}")
                 self._log_digest(
                     recipients=recipients,
@@ -486,13 +486,13 @@ class EmailDigester:
                     success=True
                 )
             else:
-                logger.error(f"Failed to send email: {response.status_code}")
+                logger.error(f"Failed to send email: {response}")
                 self._log_digest(
                     recipients=recipients,
                     sections=list(digest_data.keys()),
                     counts={},
                     success=False,
-                    error_message=f"HTTP {response.status_code}"
+                    error_message=str(response)
                 )
         
         except Exception as e:

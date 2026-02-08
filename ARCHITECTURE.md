@@ -98,7 +98,7 @@
 │  │     - All "New" Mention Markets                                     │  │
 │  │     - Top N Relative Volume Standouts                               │  │
 │  │  3. Generate HTML email                                             │  │
-│  │  4. Send via SendGrid                                               │  │
+│  │  4. Send via Resend                                               │  │
 │  │  5. Log delivery status                                             │  │
 │  │                                                                       │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
@@ -112,7 +112,7 @@
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌────────────────────────┐   ┌──────────────────────┐                     │
-│  │    Kalshi API          │   │    SendGrid          │                     │
+│  │    Kalshi API          │   │    Resend          │                     │
 │  │  (Market Data Source)  │   │  (Email Delivery)    │                     │
 │  ├────────────────────────┤   ├──────────────────────┤                     │
 │  │                        │   │                      │                     │
@@ -138,7 +138,7 @@
 │  2. PostgreSQL → Streamlit Dashboard → User Browser                         │
 │     (On-demand, cached queries)                                              │
 │                                                                              │
-│  3. PostgreSQL → Email Worker → SendGrid → Recipients                       │
+│  3. PostgreSQL → Email Worker → Resend → Recipients                       │
 │     (4x daily: 6am, 12pm, 6pm, 12am ET)                                    │
 │                                                                              │
 │  4. User → Email Settings Page → PostgreSQL                                 │
@@ -201,7 +201,7 @@
 │  🔒 Environment Variables (Railway):                                        │
 │  - DATABASE_URL          (PostgreSQL connection)                            │
 │  - KALSHI_API_BASE_URL   (public API - no auth)                             │
-│  - SENDGRID_API_KEY      (Email delivery)                                   │
+│  - RESEND_API_KEY      (Email delivery)                                   │
 │  - EMAIL_FROM            (Sender address)                                   │
 │                                                                              │
 │  🔐 Best Practices:                                                         │
@@ -223,7 +223,7 @@
 │  ORM:             SQLAlchemy 2.0+                                           │
 │  Validation:      Pydantic 2.5+                                             │
 │  HTTP Client:     Requests + Retry                                          │
-│  Email:           SendGrid API                                              │
+│  Email:           Resend API                                              │
 │  Deployment:      Railway (backend) + Streamlit Cloud (frontend)            │
 │  Scheduling:      Railway Cron                                              │
 │  Logging:         Structlog                                                 │
@@ -263,7 +263,7 @@
 │                                                                              │
 │  Railway:           $5-10/month (PostgreSQL + cron workers)                 │
 │  Streamlit Cloud:   Free (Community tier) or $10/month                      │
-│  SendGrid:          Free (100 emails/day, only need ~4/day)                 │
+│  Resend:          Free (3,000 emails/month, only need ~4/day)                 │
 │                                                                              │
 │  Total:             $5-20/month depending on configuration                  │
 │                                                                              │
@@ -283,7 +283,7 @@
 ```
 Kalshi API → Ingestion → PostgreSQL → Dashboard → User
                     ↓
-                Email Worker → SendGrid → Recipients
+                Email Worker → Resend → Recipients
 ```
 
 **Deployment:**

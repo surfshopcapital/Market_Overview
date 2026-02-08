@@ -49,7 +49,7 @@
   - [x] Mention markets (sorted by expiration)
   - [x] Relative volume standouts (excluding sports)
 - [x] HTML email generation
-- [x] SendGrid integration
+- [x] Resend integration
 - [x] Delivery logging
 - [x] Test email capability (--force flag)
 
@@ -295,7 +295,7 @@ The system is **fully production-ready** with:
 1. **Setup Environment**
    - Copy `.env.example` to `.env`
    - Fill in Kalshi API credentials
-   - Add SendGrid API key
+   - Add Resend API key
    - Set DATABASE_URL
 
 2. **Local Testing** (Optional)
