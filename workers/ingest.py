@@ -62,6 +62,7 @@ class DataIngester:
             # Step 2: Fetch and filter events (exclude sports, get nested markets)
             logger.info("Fetching all events...")
             events = self.client.get_all_events(
+                status="open",
                 with_nested_markets=True
             )
             logger.info(f"Fetched {len(events)} total events from API")
@@ -153,8 +154,8 @@ class DataIngester:
                     for market in event.markets:
                         # Skip if:
                         # 1. Market is older than 3 days AND volume < 1000
-                        # 2. Market is not active (status != 'active')
-                        if market.status != 'active':
+                        # 2. Market is not open (API returns 'open' or 'active')
+                        if market.status not in ('active', 'open'):
                             continue
                         
                         if market.created_time and market.created_time < three_days_ago:

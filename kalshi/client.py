@@ -196,9 +196,8 @@ class KalshiClient:
         
         if cursor:
             params["cursor"] = cursor
-        # Don't send status parameter - API doesn't support it
-        # if status:
-        #     params["status"] = status
+        if status:
+            params["status"] = status
         if series_ticker:
             params["series_ticker"] = series_ticker
         if min_close_ts:
