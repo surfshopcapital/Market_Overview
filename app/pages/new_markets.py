@@ -7,11 +7,11 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from config import SessionLocal
-from app.utils.db_utils import get_new_events, get_markets_for_event, get_all_categories
+from app.utils.db_utils import get_new_events, get_markets_for_event, get_all_categories, get_new_counts
 from app.utils.refresh import show_refresh_controls
 
 st.title("🆕 New Markets")
-st.markdown("Track recently opened events and markets")
+st.markdown("Track recently opened events and markets (sports excluded)")
 
 # Show refresh controls
 show_refresh_controls()
@@ -47,11 +47,21 @@ try:
         category_filter=category_filter if category_filter != "All" else None
     )
     
+    # Get 24h counts
+    counts_24h = get_new_counts(db, window_hours=24)
+    
+    # Show metrics
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric(f"New Events ({time_window}h)", len(df))
+    with col2:
+        st.metric("New Events (24h)", counts_24h["new_events"])
+    with col3:
+        st.metric("New Markets (24h)", counts_24h["new_markets"])
+    
     if df.empty:
         st.info(f"No new events found in the last {time_window} hours")
     else:
-        st.metric("New Events", len(df))
-        
         st.markdown("### Events")
         st.markdown("*Click on a row to see markets within the event*")
         
@@ -61,7 +71,8 @@ try:
             use_container_width=True,
             hide_index=True,
             on_select="rerun",
-            selection_mode="single-row"
+            selection_mode="single-row",
+            key="new_events_table"
         )
         
         # Show markets for selected event
@@ -78,7 +89,8 @@ try:
                 st.dataframe(
                     markets_df,
                     use_container_width=True,
-                    hide_index=True
+                    hide_index=True,
+                    key="new_markets_detail"
                 )
                 
                 # Add link to Kalshi

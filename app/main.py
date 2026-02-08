@@ -12,15 +12,15 @@ st.set_page_config(
 # Navigation
 pages = {
     "New Markets": [
-        st.Page("app/pages/new_markets.py", title="🆕 New Markets", icon="🆕"),
+        st.Page("pages/new_markets.py", title="🆕 New Markets", icon="🆕"),
     ],
     "Analytics": [
-        st.Page("app/pages/trending.py", title="📈 Trending", icon="📈"),
-        st.Page("app/pages/mentions.py", title="💬 Mentions", icon="💬"),
-        st.Page("app/pages/relative_volume.py", title="🔥 Relative Volume", icon="🔥"),
+        st.Page("pages/trending.py", title="📈 Trending", icon="📈"),
+        st.Page("pages/mentions.py", title="💬 Mentions", icon="💬"),
+        st.Page("pages/relative_volume.py", title="🔥 Relative Volume", icon="🔥"),
     ],
     "Settings": [
-        st.Page("app/pages/email_settings.py", title="⚙️ Email Settings", icon="⚙️"),
+        st.Page("pages/email_settings.py", title="⚙️ Email Settings", icon="⚙️"),
     ],
 }
 

@@ -45,10 +45,23 @@ with st.sidebar:
     
     search_term = st.text_input("Search", placeholder="Search events...")
 
-# Get relative volume events
+# Get relative volume events with caching
+@st.cache_data(ttl=1800)  # Cache for 30 minutes
+def get_cached_relative_volume(period_hours: int, baseline_days: int, search_term: str = None):
+    """Cached wrapper for relative volume query."""
+    db = SessionLocal()
+    try:
+        return get_relative_volume_events(
+            db,
+            period_hours=period_hours,
+            baseline_days=baseline_days,
+            search_term=search_term
+        )
+    finally:
+        db.close()
+
 try:
-    df = get_relative_volume_events(
-        db,
+    df = get_cached_relative_volume(
         period_hours=period,
         baseline_days=baseline,
         search_term=search_term if search_term else None

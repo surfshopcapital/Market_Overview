@@ -1,10 +1,10 @@
 """Data ingestion worker to fetch and store Kalshi market data."""
 import logging
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Set
 import pytz
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from sqlalchemy.dialects.postgresql import insert
 
 from config import settings, SessionLocal
@@ -135,7 +135,7 @@ class DataIngester:
             # Prepare bulk event data
             event_values = []
             market_values = []
-            three_days_ago = datetime.utcnow() - timedelta(days=3)
+            three_days_ago = datetime.now(timezone.utc) - timedelta(days=3)
             
             for event in events:
                 event_values.append({
@@ -158,8 +158,10 @@ class DataIngester:
                         if market.status not in ('active', 'open'):
                             continue
                         
-                        if market.created_time and market.created_time < three_days_ago:
-                            if (market.volume or 0) < 1000:
+                        created = market.created_time
+                        if created:
+                            created_utc = created if created.tzinfo else created.replace(tzinfo=timezone.utc)
+                            if created_utc < three_days_ago and (market.volume or 0) < 1000:
                                 continue
                         
                         market_values.append({
@@ -171,7 +173,6 @@ class DataIngester:
                             'yes_sub_title': market.yes_sub_title,
                             'no_sub_title': market.no_sub_title,
                             'created_time': market.created_time,
-                            'updated_time': market.updated_time,
                             'open_time': market.open_time,
                             'close_time': market.close_time,
                             'expiration_time': market.expiration_time,
@@ -184,7 +185,7 @@ class DataIngester:
                             'last_price': market.last_price,
                             'liquidity': market.liquidity,
                             'can_close_early': market.can_close_early,
-                            'last_updated_at': datetime.utcnow()
+                            'last_updated_at': datetime.now(timezone.utc)
                         })
             
             # Bulk upsert events
@@ -197,7 +198,7 @@ class DataIngester:
                         'title': stmt.excluded.title,
                         'sub_title': stmt.excluded.sub_title,
                         'category': stmt.excluded.category,
-                        'updated_at': datetime.utcnow()
+                        'updated_at': datetime.now(timezone.utc)
                     }
                 )
                 self.db.execute(stmt)
@@ -214,7 +215,6 @@ class DataIngester:
                         'subtitle': stmt.excluded.subtitle,
                         'yes_sub_title': stmt.excluded.yes_sub_title,
                         'no_sub_title': stmt.excluded.no_sub_title,
-                        'updated_time': stmt.excluded.updated_time,
                         'close_time': stmt.excluded.close_time,
                         'expiration_time': stmt.excluded.expiration_time,
                         'status': stmt.excluded.status,
@@ -226,7 +226,7 @@ class DataIngester:
                         'last_price': stmt.excluded.last_price,
                         'liquidity': stmt.excluded.liquidity,
                         'can_close_early': stmt.excluded.can_close_early,
-                        'last_updated_at': datetime.utcnow()
+                        'last_updated_at': datetime.now(timezone.utc)
                     }
                 )
                 self.db.execute(stmt)
@@ -244,12 +244,12 @@ class DataIngester:
         logger.info("Cleaning up low-volume markets...")
         
         try:
-            three_days_ago = datetime.utcnow() - timedelta(days=3)
+            three_days_ago = datetime.now(timezone.utc) - timedelta(days=3)
             
             deleted = self.db.query(Market).filter(
                 Market.created_time < three_days_ago,
                 Market.volume < 1000,
-                Market.status == "active"
+                Market.status.in_(['active', 'open'])
             ).delete()
             
             self.db.commit()
@@ -269,7 +269,7 @@ class DataIngester:
             
             # Get top markets by 24h volume
             trending_markets = self.db.query(Market).filter(
-                Market.status == "open",
+                Market.status.in_(['active', 'open']),
                 Market.volume_24h > 0
             ).order_by(
                 Market.volume_24h.desc()
@@ -287,27 +287,29 @@ class DataIngester:
             self.db.rollback()
     
     def _identify_mention_markets(self):
-        """Identify mention markets based on title keywords."""
+        """Identify mention markets based on category."""
         logger.info("Identifying mention markets...")
         
         try:
             # Reset all mention flags
             self.db.query(Market).update({"is_mention": False})
             
-            # Find markets with mention keywords in title
-            mention_markets = []
-            all_markets = self.db.query(Market).filter(
-                Market.status == "open"
+            # Get all events in the "Mentions" category (case-insensitive)
+            mention_events = self.db.query(Event).filter(
+                func.lower(Event.category) == 'mentions'
             ).all()
             
-            for market in all_markets:
-                title_lower = market.title.lower()
-                if any(keyword in title_lower for keyword in MENTION_KEYWORDS):
-                    market.is_mention = True
-                    mention_markets.append(market)
+            # Mark all markets in mention events as mention markets
+            mention_count = 0
+            for event in mention_events:
+                updated = self.db.query(Market).filter(
+                    Market.event_ticker == event.event_ticker,
+                    Market.status.in_(['active', 'open'])
+                ).update({"is_mention": True})
+                mention_count += updated
             
             self.db.commit()
-            logger.info(f"Identified {len(mention_markets)} mention markets")
+            logger.info(f"Identified {mention_count} mention markets in {len(mention_events)} mention events")
             
         except Exception as e:
             logger.error(f"Error identifying mention markets: {e}")
@@ -318,11 +320,11 @@ class DataIngester:
         logger.info("Creating market snapshots...")
         
         try:
-            snapshot_time = datetime.utcnow()
+            snapshot_time = datetime.now(timezone.utc)
             
             # Get only active markets with volume > 0
             markets = self.db.query(Market).filter(
-                Market.status == "active",
+                Market.status.in_(['active', 'open']),
                 Market.volume > 0
             ).all()
             
@@ -351,8 +353,8 @@ class DataIngester:
             self.db.commit()
             logger.info(f"Created {len(snapshot_values)} snapshots")
             
-            # Clean up old snapshots (keep last 60 days)
-            cutoff_date = datetime.utcnow() - timedelta(days=60)
+            # Clean up old snapshots (keep last 30 days)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
             deleted = self.db.query(MarketSnapshot).filter(
                 MarketSnapshot.snapshot_time < cutoff_date
             ).delete()

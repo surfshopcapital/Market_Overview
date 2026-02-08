@@ -19,7 +19,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Data Ingestion Worker (Every 15 minutes)
+  # Data Ingestion Worker (Every 30 minutes)
   ingestion-worker:
     build:
       context: .
@@ -29,8 +29,8 @@ services:
       KALSHI_API_BASE_URL: ${{ KALSHI_API_BASE_URL }}
       LOG_LEVEL: ${{ LOG_LEVEL }}
     cron:
-      # Run every 15 minutes
-      - schedule: "*/15 * * * *"
+      # Run every 30 minutes
+      - schedule: "*/30 * * * *"
         command: "python workers/ingest.py"
 
   # Email Digest Worker (Multiple schedules)

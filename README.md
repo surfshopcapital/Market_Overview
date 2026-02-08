@@ -12,8 +12,10 @@ Production-ready Streamlit dashboard for Kalshi prediction markets with PostgreS
 - **Active Markets Only** - Only processes `status="active"` markets
 - **Bulk Database Ops** - PostgreSQL batch upserts (~90% faster writes)
 - **Streamlined Schema** - Removed unnecessary fields (no_bid/no_ask derived from yes_bid/yes_ask)
-- **15-Minute Refresh** - Cron runs every 15 min instead of hourly
+- **30-Minute Refresh** - Cron runs every 30 min (optimized for storage)
+- **30-Day Retention** - Snapshots kept for 30 days (balanced storage/performance)
 - **Manual Refresh** - All pages have refresh button with timestamp
+- **Real Trend Indicators** - 30m and 24h price trends from snapshot history
 
 📄 See [OPTIMIZATION_SUMMARY.md](OPTIMIZATION_SUMMARY.md) for full details.
 
@@ -33,11 +35,12 @@ Production-ready Streamlit dashboard for Kalshi prediction markets with PostgreS
    - Deployed on Railway
 
 3. **Data Ingestion Worker**
-   - Runs **every 15 minutes** via Railway Cron
+   - Runs **every 30 minutes** via Railway Cron
    - Fetches data from Kalshi API (public endpoints only)
    - Filters: excludes sports, low-volume old markets
-   - Identifies trending and mention markets
+   - Identifies trending and mention markets (by category)
    - Creates volume snapshots for active markets only
+   - Retains 30 days of snapshot history
 
 4. **Email Digest Worker**
    - Runs 4x daily (6am, 12pm, 6pm, 12am ET)

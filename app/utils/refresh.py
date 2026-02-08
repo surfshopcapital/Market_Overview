@@ -28,7 +28,7 @@ def show_refresh_controls():
         st.caption(f"Last updated: {time_str}")
     
     with col2:
-        st.caption("Auto-refresh: Every 15 min")
+        st.caption("Auto-refresh: Every 30 min")
     
     with col3:
         if st.button("🔄 Refresh Now", type="primary", use_container_width=True):

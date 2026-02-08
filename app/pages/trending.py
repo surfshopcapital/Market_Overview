@@ -11,7 +11,7 @@ from app.utils.db_utils import get_trending_markets, get_markets_for_event, get_
 from app.utils.refresh import show_refresh_controls
 
 st.title("📈 Trending Markets")
-st.markdown("Markets with high 24-hour volume")
+st.markdown("Markets with high 24-hour volume (sports excluded)")
 
 # Show refresh controls
 show_refresh_controls()
@@ -44,24 +44,17 @@ try:
     else:
         st.metric("Trending Markets", len(df))
         
-        # Display markets with selection
-        st.dataframe(
+        # Display markets with selection - FIX: only one dataframe
+        event_selection = st.dataframe(
             df[[col for col in df.columns if col != "Event Ticker"]],  # Hide Event Ticker column
             use_container_width=True,
             hide_index=True,
             on_select="rerun",
-            selection_mode="single-row"
+            selection_mode="single-row",
+            key="trending_markets_table"
         )
         
         # Show event details for selected market
-        event_selection = st.dataframe(
-            df[[col for col in df.columns if col != "Event Ticker"]],
-            use_container_width=True,
-            hide_index=True,
-            on_select="rerun",
-            selection_mode="single-row"
-        )
-        
         if event_selection and event_selection.selection.rows:
             selected_idx = event_selection.selection.rows[0]
             selected_market = df.iloc[selected_idx]
@@ -76,7 +69,8 @@ try:
                 st.dataframe(
                     markets_df,
                     use_container_width=True,
-                    hide_index=True
+                    hide_index=True,
+                    key="trending_markets_detail"
                 )
                 
                 # Add links
