@@ -1,0 +1,102 @@
+# Railway Configuration
+# https://docs.railway.app/reference/config-as-code
+
+version: 2
+
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:15-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${{ POSTGRES_DB }}
+      POSTGRES_USER: ${{ POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ POSTGRES_PASSWORD }}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Data Ingestion Worker (Hourly)
+  ingestion-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: ${{ DATABASE_URL }}
+      KALSHI_API_BASE_URL: ${{ KALSHI_API_BASE_URL }}
+      KALSHI_API_KEY: ${{ KALSHI_API_KEY }}
+      KALSHI_API_SECRET: ${{ KALSHI_API_SECRET }}
+      KALSHI_EMAIL: ${{ KALSHI_EMAIL }}
+      KALSHI_PASSWORD: ${{ KALSHI_PASSWORD }}
+      LOG_LEVEL: ${{ LOG_LEVEL }}
+    cron:
+      # Run every hour at minute 0
+      - schedule: "0 * * * *"
+        command: "python workers/ingest.py"
+
+  # Email Digest Worker (Multiple schedules)
+  email-worker-6am:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: ${{ DATABASE_URL }}
+      SENDGRID_API_KEY: ${{ SENDGRID_API_KEY }}
+      EMAIL_FROM: ${{ EMAIL_FROM }}
+      EMAIL_FROM_NAME: ${{ EMAIL_FROM_NAME }}
+      LOG_LEVEL: ${{ LOG_LEVEL }}
+    cron:
+      # Run at 6 AM Eastern (11:00 UTC)
+      - schedule: "0 11 * * *"
+        command: "python workers/emailer.py --force"
+
+  email-worker-noon:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: ${{ DATABASE_URL }}
+      SENDGRID_API_KEY: ${{ SENDGRID_API_KEY }}
+      EMAIL_FROM: ${{ EMAIL_FROM }}
+      EMAIL_FROM_NAME: ${{ EMAIL_FROM_NAME }}
+      LOG_LEVEL: ${{ LOG_LEVEL }}
+    cron:
+      # Run at 12 PM Eastern (17:00 UTC)
+      - schedule: "0 17 * * *"
+        command: "python workers/emailer.py --force"
+
+  email-worker-6pm:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: ${{ DATABASE_URL }}
+      SENDGRID_API_KEY: ${{ SENDGRID_API_KEY }}
+      EMAIL_FROM: ${{ EMAIL_FROM }}
+      EMAIL_FROM_NAME: ${{ EMAIL_FROM_NAME }}
+      LOG_LEVEL: ${{ LOG_LEVEL }}
+    cron:
+      # Run at 6 PM Eastern (23:00 UTC)
+      - schedule: "0 23 * * *"
+        command: "python workers/emailer.py --force"
+
+  email-worker-midnight:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: ${{ DATABASE_URL }}
+      SENDGRID_API_KEY: ${{ SENDGRID_API_KEY }}
+      EMAIL_FROM: ${{ EMAIL_FROM }}
+      EMAIL_FROM_NAME: ${{ EMAIL_FROM_NAME }}
+      LOG_LEVEL: ${{ LOG_LEVEL }}
+    cron:
+      # Run at 12 AM Eastern (05:00 UTC)
+      - schedule: "0 5 * * *"
+        command: "python workers/emailer.py --force"
+
+volumes:
+  pgdata:
