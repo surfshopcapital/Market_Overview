@@ -43,11 +43,9 @@ class Market(Base):
     
     # Timestamps
     created_time = Column(TIMESTAMP(timezone=True), index=True)
-    updated_time = Column(TIMESTAMP(timezone=True))
     open_time = Column(TIMESTAMP(timezone=True), index=True)
     close_time = Column(TIMESTAMP(timezone=True), index=True)
     expiration_time = Column(TIMESTAMP(timezone=True), index=True)
-    settlement_timer_seconds = Column(Integer)
     
     # Status and trading data
     status = Column(String(20), index=True)
@@ -55,19 +53,14 @@ class Market(Base):
     volume_24h = Column(Integer, default=0, index=True)
     open_interest = Column(Integer, default=0)
     
-    # Prices (in cents)
+    # Prices (in cents) - only yes_bid/yes_ask, derive no_bid/no_ask
     yes_bid = Column(Integer)
     yes_ask = Column(Integer)
-    no_bid = Column(Integer)
-    no_ask = Column(Integer)
     last_price = Column(Integer)
     liquidity = Column(Integer)
     
     # Other properties
     can_close_early = Column(Boolean, default=False)
-    result = Column(String(10))
-    settlement_value = Column(Integer)
-    settlement_ts = Column(TIMESTAMP(timezone=True))
     
     # Custom flags
     is_mention = Column(Boolean, default=False, index=True)
@@ -92,14 +85,12 @@ class MarketSnapshot(Base):
     ticker = Column(String(100), ForeignKey("markets.ticker", ondelete="CASCADE"), nullable=False)
     snapshot_time = Column(TIMESTAMP(timezone=True), nullable=False, index=True)
     
-    # Snapshot data
+    # Snapshot data (streamlined)
     volume = Column(Integer)
     volume_24h = Column(Integer)
     open_interest = Column(Integer)
     yes_bid = Column(Integer)
     yes_ask = Column(Integer)
-    no_bid = Column(Integer)
-    no_ask = Column(Integer)
     last_price = Column(Integer)
     liquidity = Column(Integer)
     

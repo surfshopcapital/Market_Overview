@@ -11,9 +11,13 @@ from config import SessionLocal
 from app.utils.db_utils import (
     get_relative_volume_events, get_markets_for_event, get_daily_volume_history
 )
+from app.utils.refresh import show_refresh_controls
 
 st.title("🔥 Relative Volume")
 st.markdown("Events with unusually high volume vs. baseline (sports excluded)")
+
+# Show refresh controls
+show_refresh_controls()
 
 # Initialize database session
 if 'db' not in st.session_state:
@@ -132,7 +136,3 @@ try:
 except Exception as e:
     st.error(f"Error loading data: {e}")
     st.exception(e)
-
-# Refresh button
-if st.button("🔄 Refresh Data"):
-    st.rerun()

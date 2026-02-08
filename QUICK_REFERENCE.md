@@ -96,10 +96,7 @@ WHERE id = 1;
 ### Required
 ```bash
 DATABASE_URL=postgresql://user:pass@host:5432/kalshi_markets
-KALSHI_API_KEY=your_key
-KALSHI_API_SECRET=your_secret
-KALSHI_EMAIL=your_email@example.com
-KALSHI_PASSWORD=your_password
+KALSHI_API_BASE_URL=https://api.elections.kalshi.com/trade-api/v2
 SENDGRID_API_KEY=your_sendgrid_key
 EMAIL_FROM=noreply@yourdomain.com
 ```

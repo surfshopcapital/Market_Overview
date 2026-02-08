@@ -67,6 +67,8 @@ def get_markets_for_event(db: Session, event_ticker: str) -> pd.DataFrame:
         desc(Market.volume)
     ).all()
     
+    from app.utils import derive_no_bid_ask
+    
     return pd.DataFrame([
         {
             "Ticker": m.ticker,
@@ -76,6 +78,8 @@ def get_markets_for_event(db: Session, event_ticker: str) -> pd.DataFrame:
             "Volume": int(m.volume or 0),
             "Yes Bid": f"{m.yes_bid}¢" if m.yes_bid else "—",
             "Yes Ask": f"{m.yes_ask}¢" if m.yes_ask else "—",
+            "No Bid": f"{derive_no_bid_ask(m.yes_bid, m.yes_ask)[0]}¢" if m.yes_bid and m.yes_ask else "—",
+            "No Ask": f"{derive_no_bid_ask(m.yes_bid, m.yes_ask)[1]}¢" if m.yes_bid and m.yes_ask else "—",
             "Last Price": f"{m.last_price}¢" if m.last_price else "—",
             "Status": m.status
         }
@@ -93,7 +97,7 @@ def get_trending_markets(
         Event, Market.event_ticker == Event.event_ticker
     ).filter(
         Market.is_trending == True,
-        Market.status == "open"
+        Market.status == "active"
     )
     
     if search_term:
@@ -136,7 +140,7 @@ def get_mention_markets(
         Event, Market.event_ticker == Event.event_ticker
     ).filter(
         Market.is_mention == True,
-        Market.status == "open",
+        Market.status == "active",
         Market.expiration_time.isnot(None)
     )
     
@@ -211,7 +215,7 @@ def get_relative_volume_events(
     ).join(
         Market, Market.event_ticker == Event.event_ticker
     ).filter(
-        Market.status == "open"
+        Market.status == "active"
     )
     
     if sports_categories:

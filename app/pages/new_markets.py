@@ -8,9 +8,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 from config import SessionLocal
 from app.utils.db_utils import get_new_events, get_markets_for_event, get_all_categories
+from app.utils.refresh import show_refresh_controls
 
 st.title("🆕 New Markets")
 st.markdown("Track recently opened events and markets")
+
+# Show refresh controls
+show_refresh_controls()
 
 # Initialize database session
 if 'db' not in st.session_state:
@@ -85,7 +89,3 @@ try:
 except Exception as e:
     st.error(f"Error loading data: {e}")
     st.exception(e)
-
-# Refresh button
-if st.button("🔄 Refresh Data"):
-    st.rerun()

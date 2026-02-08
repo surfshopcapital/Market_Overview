@@ -150,10 +150,7 @@ A production-ready Streamlit dashboard for monitoring Kalshi prediction markets 
 ### Required Environment Variables
 ```bash
 DATABASE_URL                 # PostgreSQL connection
-KALSHI_API_KEY              # Kalshi API credentials
-KALSHI_API_SECRET
-KALSHI_EMAIL
-KALSHI_PASSWORD
+KALSHI_API_BASE_URL         # Optional - Kalshi public API (no auth)
 SENDGRID_API_KEY            # Email delivery
 EMAIL_FROM
 LOG_LEVEL                   # INFO/DEBUG

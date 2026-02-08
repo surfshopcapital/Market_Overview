@@ -1,7 +1,7 @@
 """Pydantic models for Kalshi API responses."""
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class MarketResponse(BaseModel):
@@ -74,4 +74,12 @@ class SeriesResponse(BaseModel):
 
 class TagsByCategoriesResponse(BaseModel):
     """Tags by categories response."""
-    tags_by_categories: Dict[str, List[str]] = {}
+    tags_by_categories: Dict[str, Optional[List[str]]] = {}
+    
+    @field_validator('tags_by_categories', mode='before')
+    @classmethod
+    def handle_none_categories(cls, v):
+        """Convert None values to empty lists."""
+        if isinstance(v, dict):
+            return {k: ([] if val is None else val) for k, val in v.items()}
+        return v

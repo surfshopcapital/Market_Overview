@@ -1,9 +1,6 @@
-"""Kalshi API client with authentication, pagination, and rate limiting."""
+"""Kalshi API client for public endpoints. No authentication required."""
 import time
 import logging
-import hashlib
-import base64
-from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from urllib.parse import urljoin
 import requests
@@ -40,27 +37,16 @@ class RateLimiter:
 
 
 class KalshiClient:
-    """Kalshi API client."""
+    """Kalshi API client for public market data. Uses unauthenticated endpoints only."""
     
     def __init__(
         self, 
-        api_key: Optional[str] = None,
-        api_secret: Optional[str] = None,
-        email: Optional[str] = None,
-        password: Optional[str] = None,
         base_url: Optional[str] = None,
         rate_limit_per_second: int = 10
     ):
-        self.api_key = api_key or settings.KALSHI_API_KEY
-        self.api_secret = api_secret or settings.KALSHI_API_SECRET
-        self.email = email or settings.KALSHI_EMAIL
-        self.password = password or settings.KALSHI_PASSWORD
         self.base_url = (base_url or settings.KALSHI_API_BASE_URL).rstrip("/")
-        
         self.session = self._create_session()
         self.rate_limiter = RateLimiter(calls_per_second=rate_limit_per_second)
-        self.access_token: Optional[str] = None
-        self.token_expires_at: Optional[datetime] = None
     
     def _create_session(self) -> requests.Session:
         """Create requests session with retry logic."""
@@ -80,59 +66,23 @@ class KalshiClient:
         
         return session
     
-    def _ensure_authenticated(self):
-        """Ensure we have a valid access token."""
-        if self.access_token and self.token_expires_at:
-            if datetime.utcnow() < self.token_expires_at - timedelta(minutes=5):
-                return
-        
-        self._login()
-    
-    def _login(self):
-        """Login and get access token."""
-        logger.info("Logging in to Kalshi API...")
-        
-        url = urljoin(self.base_url, "/login")
-        payload = {
-            "email": self.email,
-            "password": self.password
-        }
-        
-        try:
-            response = self.session.post(url, json=payload, timeout=30)
-            response.raise_for_status()
-            
-            data = response.json()
-            self.access_token = data.get("token")
-            
-            # Assume token is valid for 24 hours
-            self.token_expires_at = datetime.utcnow() + timedelta(hours=23)
-            
-            logger.info("Successfully logged in to Kalshi API")
-        except Exception as e:
-            logger.error(f"Failed to login to Kalshi API: {e}")
-            raise
-    
     def _make_request(
         self, 
         method: str, 
         endpoint: str, 
         params: Optional[Dict[str, Any]] = None,
-        json_data: Optional[Dict[str, Any]] = None,
-        authenticated: bool = False
+        json_data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Make HTTP request with rate limiting and error handling."""
+        """Make HTTP request with rate limiting and error handling. Public endpoints only."""
         self.rate_limiter.wait()
         
-        url = urljoin(self.base_url, endpoint)
+        # Properly join base URL and endpoint (strip leading slash from endpoint)
+        endpoint = endpoint.lstrip("/")
+        url = f"{self.base_url}/{endpoint}"
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
-        
-        if authenticated:
-            self._ensure_authenticated()
-            headers["Authorization"] = f"Bearer {self.access_token}"
         
         try:
             response = self.session.request(
@@ -238,7 +188,7 @@ class KalshiClient:
         with_nested_markets: bool = True,
         min_close_ts: Optional[int] = None
     ) -> EventsListResponse:
-        """Get events with optional filters."""
+        """Get events with optional filters. Note: status filter may not be supported."""
         params = {
             "limit": min(limit, 200),
             "with_nested_markets": str(with_nested_markets).lower()
@@ -246,8 +196,9 @@ class KalshiClient:
         
         if cursor:
             params["cursor"] = cursor
-        if status:
-            params["status"] = status
+        # Don't send status parameter - API doesn't support it
+        # if status:
+        #     params["status"] = status
         if series_ticker:
             params["series_ticker"] = series_ticker
         if min_close_ts:
@@ -266,8 +217,10 @@ class KalshiClient:
         """Get all events using pagination."""
         all_events = []
         cursor = None
+        page = 1
         
         while True:
+            logger.info(f"Fetching events page {page}...")
             response = self.get_events(
                 limit=200,
                 cursor=cursor,
@@ -277,6 +230,8 @@ class KalshiClient:
             )
             
             all_events.extend(response.events)
+            markets_count = sum(len(e.markets or []) for e in response.events)
+            logger.info(f"Page {page} done: got {len(response.events)} events, {markets_count} markets. Total so far: {len(all_events)} events")
             
             if max_results and len(all_events) >= max_results:
                 return all_events[:max_results]
@@ -284,6 +239,7 @@ class KalshiClient:
             cursor = response.cursor
             if not cursor:
                 break
+            page += 1
         
         return all_events
     

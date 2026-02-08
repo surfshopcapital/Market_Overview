@@ -20,7 +20,7 @@ CREATE INDEX idx_events_series_ticker ON events(series_ticker);
 CREATE INDEX idx_events_created_at ON events(created_at);
 CREATE INDEX idx_events_first_seen_at ON events(first_seen_at);
 
--- Markets table
+-- Markets table (streamlined - only essential fields)
 CREATE TABLE IF NOT EXISTS markets (
     ticker VARCHAR(100) PRIMARY KEY,
     event_ticker VARCHAR(100) REFERENCES events(event_ticker) ON DELETE CASCADE,
@@ -30,25 +30,18 @@ CREATE TABLE IF NOT EXISTS markets (
     yes_sub_title TEXT,
     no_sub_title TEXT,
     created_time TIMESTAMP,
-    updated_time TIMESTAMP,
     open_time TIMESTAMP,
     close_time TIMESTAMP,
     expiration_time TIMESTAMP,
-    settlement_timer_seconds INTEGER,
     status VARCHAR(20),
     volume INTEGER DEFAULT 0,
     volume_24h INTEGER DEFAULT 0,
     open_interest INTEGER DEFAULT 0,
     yes_bid INTEGER,
     yes_ask INTEGER,
-    no_bid INTEGER,
-    no_ask INTEGER,
     last_price INTEGER,
     liquidity INTEGER,
     can_close_early BOOLEAN DEFAULT FALSE,
-    result VARCHAR(10),
-    settlement_value INTEGER,
-    settlement_ts TIMESTAMP,
     is_mention BOOLEAN DEFAULT FALSE,
     is_trending BOOLEAN DEFAULT FALSE,
     first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -66,7 +59,7 @@ CREATE INDEX idx_markets_is_mention ON markets(is_mention);
 CREATE INDEX idx_markets_is_trending ON markets(is_trending);
 CREATE INDEX idx_markets_volume_24h ON markets(volume_24h);
 
--- Market snapshots for time-series data
+-- Market snapshots for time-series data (streamlined)
 CREATE TABLE IF NOT EXISTS market_snapshots (
     id SERIAL PRIMARY KEY,
     ticker VARCHAR(100) REFERENCES markets(ticker) ON DELETE CASCADE,
@@ -76,8 +69,6 @@ CREATE TABLE IF NOT EXISTS market_snapshots (
     open_interest INTEGER,
     yes_bid INTEGER,
     yes_ask INTEGER,
-    no_bid INTEGER,
-    no_ask INTEGER,
     last_price INTEGER,
     liquidity INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -67,10 +67,6 @@ Go to Railway dashboard → Your Project → Variables, and add:
 
 ```
 KALSHI_API_BASE_URL=https://api.elections.kalshi.com/trade-api/v2
-KALSHI_API_KEY=your_key_here
-KALSHI_API_SECRET=your_secret_here
-KALSHI_EMAIL=your_email@example.com
-KALSHI_PASSWORD=your_password
 
 SENDGRID_API_KEY=your_sendgrid_key
 EMAIL_FROM=noreply@yourdomain.com

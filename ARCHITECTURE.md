@@ -200,10 +200,7 @@
 │                                                                              │
 │  🔒 Environment Variables (Railway):                                        │
 │  - DATABASE_URL          (PostgreSQL connection)                            │
-│  - KALSHI_API_KEY        (API authentication)                               │
-│  - KALSHI_API_SECRET     (API authentication)                               │
-│  - KALSHI_EMAIL          (Login credentials)                                │
-│  - KALSHI_PASSWORD       (Login credentials)                                │
+│  - KALSHI_API_BASE_URL   (public API - no auth)                             │
 │  - SENDGRID_API_KEY      (Email delivery)                                   │
 │  - EMAIL_FROM            (Sender address)                                   │
 │                                                                              │

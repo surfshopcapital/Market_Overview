@@ -29,9 +29,6 @@ def test_config():
         
         required_vars = [
             "DATABASE_URL",
-            "KALSHI_API_KEY",
-            "KALSHI_API_SECRET",
-            "KALSHI_EMAIL",
             "SENDGRID_API_KEY"
         ]
         

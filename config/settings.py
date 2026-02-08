@@ -9,15 +9,11 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = Field(..., description="PostgreSQL database URL")
     
-    # Kalshi API
+    # Kalshi API (public endpoints only - no auth required)
     KALSHI_API_BASE_URL: str = Field(
         default="https://api.elections.kalshi.com/trade-api/v2",
         description="Kalshi API base URL"
     )
-    KALSHI_API_KEY: str = Field(..., description="Kalshi API key")
-    KALSHI_API_SECRET: str = Field(..., description="Kalshi API secret")
-    KALSHI_EMAIL: str = Field(..., description="Kalshi account email")
-    KALSHI_PASSWORD: str = Field(..., description="Kalshi account password")
     
     # Email (SendGrid)
     SENDGRID_API_KEY: str = Field(..., description="SendGrid API key")
